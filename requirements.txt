@@ -1,0 +1,2 @@
+# Standar library Python digunakan untuk efisiensi tinggi
+# File ini mendefinisikan project sebagai Python service di Render.com

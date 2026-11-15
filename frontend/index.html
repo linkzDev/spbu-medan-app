@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Pantau SPBU Medan - Cek Keramaian & Rute Terdekat</title>
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#ffffff">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Top App Bar (Android Mobile Style) -->
+    <header class="top-bar">
+      <div class="bar-left">
+        <div class="logo-mark">P</div>
+        <div>
+          <h1 class="app-title">Pantau SPBU</h1>
+          <p class="app-subtitle">Kota Medan • Waktu Nyata</p>
+        </div>
+      </div>
+      <button id="btn-refresh" class="icon-btn" title="Segarkan Data" aria-label="Segarkan">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="23 4 23 10 17 10"></polyline>
+          <polyline points="1 20 1 14 7 14"></polyline>
+          <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path>
+        </svg>
+      </button>
+    </header>
+
+    <main class="content-body">
+      <!-- Real GPS Administrative Location Card -->
+      <section class="location-card">
+        <div class="location-header">
+          <div class="location-status-badge">
+            <span class="live-pulse"></span>
+            <span id="gps-status-text">Mendeteksi Posisi Riil GPS...</span>
+          </div>
+          <span id="current-clock" class="clock-badge">--:-- WIB</span>
+        </div>
+        
+        <div class="location-content">
+          <div class="location-icon-wrapper">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#111827" stroke-width="2">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+              <circle cx="12" cy="10" r="3"></circle>
+            </svg>
+          </div>
+          <div class="location-details">
+            <div id="location-city-district" class="location-title">Kota Medan</div>
+            <div id="location-road" class="location-road-name">Mendeteksi jalan & kecamatan...</div>
+            <div id="location-coords" class="location-sub">Koordinat: -</div>
+          </div>
+        </div>
+
+        <!-- TOP KECAMATAN TERDEKAT (Slideable Horizontal Row) -->
+        <div class="districts-container">
+          <div class="districts-header-row">
+            <span class="section-micro-label">Top Kecamatan Terdekat:</span>
+            <span class="slide-hint">Geser ke kanan ➔</span>
+          </div>
+          <div id="district-chips" class="district-slider">
+            <span class="chip-skeleton">Mengkalkulasi jarak kecamatan terdekat...</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Filter & Sort Bar -->
+      <section class="filter-section">
+        <div class="sort-tabs">
+          <button id="tab-nearest" class="tab-btn active">Jarak Terdekat</button>
+          <button id="tab-quietest" class="tab-btn">Paling Sepi (Rekomendasi)</button>
+          <button id="tab-all" class="tab-btn">Semua SPBU</button>
+        </div>
+
+        <div class="search-box">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#6B7280" stroke-width="2">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="search-input" placeholder="Cari SPBU, jalan, kecamatan, atau BBM..." />
+        </div>
+      </section>
+
+      <!-- SPBU Summary Metrics -->
+      <div class="metrics-row">
+        <div class="metric-box">
+          <span class="metric-num" id="total-spbu-count">0</span>
+          <span class="metric-label">SPBU Terpantau</span>
+        </div>
+        <div class="metric-box highlight-green">
+          <span class="metric-num" id="quiet-spbu-count">0</span>
+          <span class="metric-label">Jalur Sepi</span>
+        </div>
+        <div class="metric-box highlight-amber">
+          <span class="metric-num" id="medium-spbu-count">0</span>
+          <span class="metric-label">Arus Normal</span>
+        </div>
+      </div>
+
+      <!-- SPBU Cards List -->
+      <section id="spbu-list" class="spbu-list">
+        <div class="loading-state">
+          <div class="spinner"></div>
+          <p>Mengkalkulasi rute jalan & skor keramaian SPBU Medan...</p>
+        </div>
+      </section>
+    </main>
+
+    <!-- Bottom Sheet Modal: Detail & Breakdown Skor -->
+    <div id="modal-backdrop" class="modal-backdrop hidden">
+      <div class="modal-sheet">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+          <div>
+            <h2 id="modal-spbu-name" class="sheet-title">Detail SPBU</h2>
+            <p id="modal-spbu-code" class="sheet-subtitle">Kode SPBU</p>
+          </div>
+          <button id="btn-close-modal" class="sheet-close-btn">&times;</button>
+        </div>
+
+        <div class="sheet-body">
+          <!-- Score Banner -->
+          <div class="score-banner">
+            <div class="score-left">
+              <span class="score-caption">Skor Keramaian</span>
+              <div class="score-digits">
+                <span id="modal-score" class="big-score">0</span>
+                <span class="score-max">/ 100</span>
+              </div>
+            </div>
+            <div class="score-right">
+              <span id="modal-status-badge" class="modal-badge">Status</span>
+              <span id="modal-wait-estimate" class="modal-wait-text">Estimasi antre: -</span>
+            </div>
+          </div>
+
+          <!-- Rute Jalan Riil -->
+          <div class="route-real-banner">
+            <div class="route-banner-icon">🚗</div>
+            <div>
+              <div class="route-banner-title">Akses Jalan Raya Riil (OSRM)</div>
+              <div id="modal-road-dist" class="route-banner-sub">Jarak rute: - km • Waktu tempuh: - mnt</div>
+            </div>
+          </div>
+
+          <!-- Formula Breakdown -->
+          <div class="breakdown-section">
+            <h3 class="section-title">Indikator Pembentuk Skor</h3>
+            <p class="section-desc">Kalkulasi 4 variabel objektif tanpa estimasi semu:</p>
+            
+            <div class="breakdown-grid">
+              <div class="factor-card">
+                <div class="factor-header">
+                  <span class="factor-name">1. Waktu Komuter</span>
+                  <span class="factor-weight">Bobot 35%</span>
+                </div>
+                <div class="factor-score-bar">
+                  <div id="bar-time" class="bar-fill" style="width: 0%"></div>
+                </div>
+                <div id="desc-time" class="factor-desc">-</div>
+              </div>
+
+              <div class="factor-card">
+                <div class="factor-header">
+                  <span class="factor-name">2. Beban Koridor Jalan</span>
+                  <span class="factor-weight">Bobot 30%</span>
+                </div>
+                <div class="factor-score-bar">
+                  <div id="bar-traffic" class="bar-fill" style="width: 0%"></div>
+                </div>
+                <div id="desc-traffic" class="factor-desc">-</div>
+              </div>
+
+              <div class="factor-card">
+                <div class="factor-header">
+                  <span class="factor-name">3. Kapasitas Nozzle Pompa</span>
+                  <span class="factor-weight">Bobot 20%</span>
+                </div>
+                <div class="factor-score-bar">
+                  <div id="bar-pump" class="bar-fill" style="width: 0%"></div>
+                </div>
+                <div id="desc-pump" class="factor-desc">-</div>
+              </div>
+
+              <div class="factor-card">
+                <div class="factor-header">
+                  <span class="factor-name">4. Fasilitas & Dwell Time</span>
+                  <span class="factor-weight">Bobot 15%</span>
+                </div>
+                <div class="factor-score-bar">
+                  <div id="bar-facility" class="bar-fill" style="width: 0%"></div>
+                </div>
+                <div id="desc-facility" class="factor-desc">-</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Fasilitas & Info Tambahan -->
+          <div class="info-group">
+            <h3 class="section-title">Fasilitas Tersedia</h3>
+            <div id="modal-facilities" class="facilities-tags"></div>
+          </div>
+
+          <div class="info-group">
+            <h3 class="section-title">Jenis Bahan Bakar</h3>
+            <div id="modal-fuels" class="fuels-tags"></div>
+          </div>
+
+          <!-- Action Route -->
+          <a id="modal-route-btn" href="#" target="_blank" rel="noopener noreferrer" class="btn-primary-route">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="3 11 22 2 13 21 11 13 3 11"></polygon>
+            </svg>
+            Buka Petunjuk Arah Google Maps
+          </a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
